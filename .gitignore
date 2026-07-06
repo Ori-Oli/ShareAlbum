@@ -4,6 +4,7 @@ node_modules
 dist
 coverage
 .turbo
+docs/
 uploads
 apps/api/uploads
 .env
