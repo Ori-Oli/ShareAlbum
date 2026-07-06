@@ -1,0 +1,12 @@
+-- AlterTable
+ALTER TABLE "albums" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "group_members" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "groups" ALTER COLUMN "id" DROP DEFAULT,
+ALTER COLUMN "inviteCode" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "users" ALTER COLUMN "id" DROP DEFAULT;

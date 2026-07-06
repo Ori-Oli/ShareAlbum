@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OAuthProvider {
+  KAKAO
+  NAVER
+}
+
+enum GroupRole {
+  OWNER
+  MEMBER
+}
+
+enum PhotoAiStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum TagSource {
+  AI
+  USER
+}
+
+model User {
+  id          String        @id @default(uuid()) @db.Uuid
+  email       String?
+  displayName String
+  avatarUrl   String?
+  provider    OAuthProvider?
+  providerId  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  albums       Album[]
+  photos       Photo[]
+  ownedGroups  Group[]       @relation("GroupOwner")
+  groupMembers GroupMember[]
+  createdTags  PhotoTag[]     @relation("PhotoTagCreator")
+  photoLikes   PhotoLike[]
+
+  @@unique([provider, providerId])
+  @@map("users")
+}
+
+model Group {
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  inviteCode  String        @unique @default(uuid())
+  ownerId     String        @db.Uuid
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  owner   User          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  albums  Album[]
+  members GroupMember[]
+
+  @@index([ownerId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String    @id @default(uuid()) @db.Uuid
+  groupId  String    @db.Uuid
+  userId   String    @db.Uuid
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model Album {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  coverUrl    String?
+  ownerId     String   @db.Uuid
+  groupId     String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  photos Photo[]
+
+  @@index([ownerId])
+  @@index([groupId])
+  @@map("albums")
+}
+
+model Photo {
+  id           String   @id @default(uuid()) @db.Uuid
+  albumId      String   @db.Uuid
+  uploaderId   String   @db.Uuid
+  url          String
+  originalName String
+  title        String?
+  description  String?
+  mimeType     String
+  size         Int
+  aiStatus     PhotoAiStatus @default(PENDING)
+  aiError      String?
+  createdAt    DateTime @default(now())
+
+  album    Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  tags     PhotoTag[]
+  likes    PhotoLike[]
+
+  @@index([albumId])
+  @@index([uploaderId])
+  @@map("photos")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  photos PhotoTag[]
+
+  @@map("tags")
+}
+
+model PhotoLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  photoId   String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  photo Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([photoId, userId])
+  @@index([photoId])
+  @@index([userId])
+  @@map("photo_likes")
+}
+
+model PhotoTag {
+  id        String    @id @default(uuid()) @db.Uuid
+  photoId   String    @db.Uuid
+  tagId     String    @db.Uuid
+  source    TagSource @default(AI)
+  createdBy String?   @db.Uuid
+  createdAt DateTime  @default(now())
+
+  photo   Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  creator User? @relation("PhotoTagCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([photoId, tagId])
+  @@index([photoId])
+  @@index([tagId])
+  @@index([createdBy])
+  @@map("photo_tags")
+}
